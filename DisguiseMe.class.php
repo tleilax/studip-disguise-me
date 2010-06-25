@@ -24,7 +24,7 @@
  *
  * @author      Jan-Hendrik Willms <tleilax+studip@gmail.com>
  * @package     IBIT_StudIP
- * @version     1.0
+ * @version     1.0.1
  */
 class DisguiseMe extends AbstractStudIPSystemPlugin
 {
@@ -57,9 +57,11 @@ class DisguiseMe extends AbstractStudIPSystemPlugin
 
 		$normal_login = !$this->is_disguised();
 
-		echo '<script type="text/javascript">';
+		ob_start();
 		include 'disguise_me.js';
-		echo '</script>';
+		$script = ob_get_clean();
+
+		$GLOBALS['_include_additional_header'] = '<script type="text/javascript">'."\n//<![CDATA[\n".$script."\n//]]>\n</script>\n";
 
 		self::$hit_once = true;
 	}
