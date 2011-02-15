@@ -2,7 +2,7 @@
 // +---------------------------------------------------------------------------+
 // DisguiseMe.class.php
 //
-// Copyright (c) 2010 Jan-Hendrik Willms <tleilax+studip@gmail.com>
+// Copyright (c) 2011 Jan-Hendrik Willms <tleilax+studip@gmail.com>
 // +---------------------------------------------------------------------------+
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -24,7 +24,7 @@
  *
  * @author      Jan-Hendrik Willms <tleilax+studip@gmail.com>
  * @package     IBIT_StudIP
- * @version     1.0.1
+ * @version     1.1
  */
 class DisguiseMe extends AbstractStudIPSystemPlugin
 {
@@ -55,21 +55,36 @@ class DisguiseMe extends AbstractStudIPSystemPlugin
 		if (!$this->is_valid_user() or self::$hit_once)
 			return;
 
-		$normal_login = !$this->is_disguised();
+		$template = false;
+		if ($this->is_disguised())
+		{
+			$link = PluginEngine::getURL($this, array('logout' => 1));
+			$template = 'disguised.js';
+		}
+		elseif (preg_match('/about\.php$/', $_SERVER['PHP_SELF']) and Request::get('username'))
+		{
+			$link = PluginEngine::getURL($this, array('disguise_as' => Request::get('username')));
+			$template = 'disguise.js';
+		}
+
+		if (!$template)
+			return;
 
 		ob_start();
-		include 'disguise_me.js';
+		include $template;
 		$script = ob_get_clean();
 
-		$GLOBALS['_include_additional_header'] = '<script type="text/javascript">'."\n//<![CDATA[\n".$script."\n//]]>\n</script>\n";
+		PageLayout::addHeadElement('script', array('type' => 'text/javascript'), $script);
 
 		self::$hit_once = true;
 	}
 
 	public function actionshow()
 	{
-		if ($this->is_disguised() and isset($_REQUEST['logout']))
+		if ($this->is_disguised() and Request::get('logout'))
 		{
+			$uname = $_SESSION['auth']->auth['uname'];
+
 			$_SESSION['auth']->auth['uid'] = $_SESSION['old_identity']['uid'];
 			$_SESSION['auth']->auth['perm'] = $_SESSION['old_identity']['perm'];
 			$_SESSION['auth']->auth['uname'] = $_SESSION['old_identity']['uname'];
@@ -77,7 +92,7 @@ class DisguiseMe extends AbstractStudIPSystemPlugin
 			$_SESSION['old_identity'] = null;
 			unset($_SESSION['old_identity']);
 
-			$this->relocate();
+			$this->relocate('about.php?username='.$uname);
 		}
 		elseif (!$this->is_disguised() and $username = Request::get('disguise_as'))
 		{
@@ -112,10 +127,10 @@ class DisguiseMe extends AbstractStudIPSystemPlugin
 		return !empty($_SESSION['old_identity']);
 	}
 
-	private function relocate()
+	private function relocate($url = '')
 	{
 		page_close();
-		header('Location: '.$GLOBALS['ABSOLUTE_URI_STUDIP']);
+		header('Location: '.$GLOBALS['ABSOLUTE_URI_STUDIP'].$url);
 		die;
 	}
 }
