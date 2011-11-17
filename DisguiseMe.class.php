@@ -24,111 +24,99 @@
  *
  * @author      Jan-Hendrik Willms <tleilax+studip@gmail.com>
  * @package     IBIT_StudIP
- * @version     1.1
+ * @version     1.3
  */
-class DisguiseMe extends AbstractStudIPSystemPlugin
-{
-	public $user;
-	private $permissions;
+class DisguiseMe extends AbstractStudIPSystemPlugin {
 	private static $hit_once = false;
 
-	public function __construct()
-	{
-		parent::AbstractStudIPSystemPlugin();
-
-		$this->user = $this->getUser();
-		$this->permissions = $this->user->getPermission();
-	}
-
-	public function getPluginname()
-	{
+	public function getPluginname() {
 		return _('Disguise Me');
 	}
 
-	public function hasBackgroundTasks()
-	{
+	public function hasBackgroundTasks() {
 		return true;
 	}
 
-	public function doBackgroundTasks()
-	{
-		if (!$this->is_valid_user() or self::$hit_once)
-			return;
+	public function doBackgroundTasks() {
+		if (!$this->is_valid_user() or self::$hit_once) {
+            return;
+		}
+        self::$hit_once = true;
 
 		$template = false;
-		if ($this->is_disguised())
-		{
+		if ($this->is_disguised()) {
 			$link = PluginEngine::getURL($this, array('logout' => 1));
+            $username = $this->get_user_name($GLOBALS['auth']->auth['uid']);
 			$template = 'disguised.js';
-		}
-		elseif (preg_match('/about\.php$/', $_SERVER['PHP_SELF']) and Request::get('username'))
-		{
+		} elseif (preg_match('/about\.php$/', $_SERVER['PHP_SELF']) and Request::get('username')) {
 			$link = PluginEngine::getURL($this, array('disguise_as' => Request::get('username')));
 			$template = 'disguise.js';
 		}
 
-		if (!$template)
-			return;
+		if (!$template) {
+            return;
+		}
 
 		ob_start();
 		include $template;
 		$script = ob_get_clean();
+        
+        $script = "//<![CDATA[\n".rtrim($script)."\n//]]>";
 
 		PageLayout::addHeadElement('script', array('type' => 'text/javascript'), $script);
-
-		self::$hit_once = true;
 	}
 
-	public function actionshow()
-	{
-		if ($this->is_disguised() and Request::get('logout'))
-		{
+    private function get_user_name ($user_id) {
+        $statement = DBManager::get()->prepare("SELECT CONCAT(Vorname, ' ', Nachname) FROM auth_user_md5 WHERE user_id = ?");
+        $statement->execute(array($user_id));
+        return $statement->fetchColumn();
+    }
+
+	public function actionshow() {
+		if ($this->is_disguised() and Request::get('logout')) {
 			$uname = $_SESSION['auth']->auth['uname'];
 
-			$_SESSION['auth']->auth['uid'] = $_SESSION['old_identity']['uid'];
-			$_SESSION['auth']->auth['perm'] = $_SESSION['old_identity']['perm'];
-			$_SESSION['auth']->auth['uname'] = $_SESSION['old_identity']['uname'];
+            foreach ($_SESSION['old_identity'] as $key => $value) {
+                $_SESSION['auth']->auth[$key] = $value;
+            }
 
 			$_SESSION['old_identity'] = null;
 			unset($_SESSION['old_identity']);
 
 			$this->relocate('about.php?username='.$uname);
-		}
-		elseif (!$this->is_disguised() and $username = Request::get('disguise_as'))
-		{
+		} elseif (!$this->is_disguised() and $username = Request::get('disguise_as')) {
 			$statement = DBManager::get()->prepare("SELECT user_id, perms FROM auth_user_md5 WHERE username = ?");
-			$statement->execute(array(Request::get('disguise_as')));
+			$statement->execute(array($username));
 			$row = $statement->fetch(PDO::FETCH_ASSOC);
 
-			if (empty($row))
-				return;
+			if (empty($row)) {
+                return;
+			}
 
 			$_SESSION['old_identity'] = array(
-				'uid' => $_SESSION['auth']->auth['uid'],
-				'perm' => $_SESSION['auth']->auth['perm'],
-				'uname' => $_SESSION['auth']->auth['uname'],
-			);
+                'uid'   => $_SESSION['auth']->auth['uid'],
+                'perm'  => $_SESSION['auth']->auth['perm'],
+                'uname' => $_SESSION['auth']->auth['uname'],
+            );
 
-			$_SESSION['auth']->auth['uid'] = $row['user_id'];
-			$_SESSION['auth']->auth['perm'] = $row['perms'];
-			$_SESSION['auth']->auth['uname'] = Request::get('disguise_as');
+			$_SESSION['auth']->auth['uid']   = $row['user_id'];
+			$_SESSION['auth']->auth['perm']  = $row['perms'];
+			$_SESSION['auth']->auth['uname'] = $username;
 
 			$this->relocate();
 		}
 	}
 
-	private function is_valid_user()
-	{
-		return $this->permissions->hasRootPermission() or $this->is_disguised();
+	private function is_valid_user() {
+		return $this->is_disguised()
+		    or $this->getUser()->getPermission()->hasRootPermission();
 	}
 
-	private function is_disguised()
-	{
+	private function is_disguised() {
 		return !empty($_SESSION['old_identity']);
 	}
 
-	private function relocate($url = '')
-	{
+	private function relocate($url = '') {
 		page_close();
 		header('Location: '.$GLOBALS['ABSOLUTE_URI_STUDIP'].$url);
 		die;
