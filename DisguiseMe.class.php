@@ -61,7 +61,7 @@ class DisguiseMe extends AbstractStudIPSystemPlugin {
             ));
             $script = "//<![CDATA[\n" . rtrim($script) . "\n//]]>";
             PageLayout::addHeadElement('script', array('type' => 'text/javascript'), $script);
-        } elseif (preg_match('~/(about\.php|dispatch\.php/profile)~', $_SERVER['PHP_SELF']) and Request::get('username')) {
+        } elseif (preg_match('~/(dispatch\.php/profile)~', $_SERVER['REQUEST_URI']) and Request::get('username')) {
             $script = $template_factory->render('disguise-js', array(
                 'link' => PluginEngine::getURL($this, array('disguise_as' => Request::get('username'))),
             ));
