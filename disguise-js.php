@@ -1,8 +1,7 @@
 jQuery(function ($) {
-        console.log('Test');
-    $('<a/>').attr('href', '<?= $link ?>')
+    $('<a>').attr('href', '<?= $link ?>')
         .text(" Als dieser Nutzer einloggen".toLocaleString())
-        .prepend('<?= Assets::img('icons/16/red/door-enter.png') ?>')
+        .prepend('<?= Assets::img('icons/16/red/door-enter.png', array('class' => 'middle')) ?>')
         .before('<br/>')
-        .insertAfter('#layout_content > table:first td:first > :not(br):last');
+        .insertAfter('#user_profile td:first > :not(br):last');
 });

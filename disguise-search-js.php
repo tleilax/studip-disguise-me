@@ -1,7 +1,5 @@
 jQuery(function ($) {
-
-    if ($('#layout_content table.default > caption').length > 1) {
-console.log('test');
+    if ($('#layout_content h3').length > 1) {
         $('#layout_content form:last tr:not(:first):not(:last)').each(function () {
             var username = $.trim($('td:eq(1) a', this).text()),
                 link = '<?= $link ?>'.replace('REPLACE-WITH-USER', username);

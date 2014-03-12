@@ -61,7 +61,7 @@ class DisguiseMe extends AbstractStudIPSystemPlugin {
             ));
             $script = "//<![CDATA[\n" . rtrim($script) . "\n//]]>";
             PageLayout::addHeadElement('script', array('type' => 'text/javascript'), $script);
-        } elseif (preg_match('~/(dispatch\.php/profile)~', $_SERVER['REQUEST_URI']) and Request::get('username')) {
+        } elseif (preg_match('~dispatch\.php/profile~', $_SERVER['REQUEST_URI']) && Request::get('username')) {
             $script = $template_factory->render('disguise-js', array(
                 'link' => PluginEngine::getURL($this, array('disguise_as' => Request::get('username'))),
             ));
@@ -101,7 +101,7 @@ class DisguiseMe extends AbstractStudIPSystemPlugin {
             $_SESSION['old_identity'] = null;
             unset($_SESSION['old_identity']);
 
-            $this->relocate('about.php?username='.$uname);
+            $this->relocate('dispatch.php/profile?username='.$uname);
         } elseif (!$this->is_disguised() and $username = Request::get('disguise_as')) {
             $statement = DBManager::get()->prepare("SELECT user_id, perms FROM auth_user_md5 WHERE username = ?");
             $statement->execute(array($username));
