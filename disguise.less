@@ -7,16 +7,28 @@
     box-shadow: 1px 1px 1px #000;
     color: #fff;
     left: 250px;
-    padding: 1em 0;
+    padding: 0 0 0.5em;
     position: fixed;
     right: 50%;
     text-align: center;
     text-shadow: 0 0 5px #000;
     z-index: 111;
 
-    -moz-transition: all 0.5s ease;
+    .transition(all 0.5s ease);
+    
+    body.fixed & {
+        padding-top: 25px;
+    }
 }
 #disguised:hover {
     background-color: rgba(255, 255, 192, 0.9);
     border-color: #f00;
+    color: #000;
+}
+
+a.disguise-me {
+    padding-left: 20px;
+    background-repeat: no-repeat;
+    background-position: left 2px;
+    .retina-background-icon('red/door-enter.png');
 }

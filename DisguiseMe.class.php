@@ -2,7 +2,7 @@
 // +---------------------------------------------------------------------------+
 // DisguiseMe.class.php
 //
-// Copyright (c) 2012 Jan-Hendrik Willms <tleilax+studip@gmail.com>
+// Copyright (c) 2014 Jan-Hendrik Willms <tleilax+studip@gmail.com>
 // +---------------------------------------------------------------------------+
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -23,118 +23,94 @@
  * DisguiseMe.class.php
  *
  * @author      Jan-Hendrik Willms <tleilax+studip@gmail.com>
- * @package     IBIT_StudIP
- * @version     1.3.1
+ * @version     1.5
  */
-class DisguiseMe extends AbstractStudIPSystemPlugin {
-    private static $hit_once = false;
-
-    public function getPluginname() {
+class DisguiseMe extends StudIPPlugin implements SystemPlugin
+{
+    public function getPluginname()
+    {
         return _('Disguise Me');
     }
 
-    public function hasBackgroundTasks() {
-        return true;
-    }
-
-    public function doBackgroundTasks() {
-        if (!$this->is_valid_user() or self::$hit_once) {
+    public function __construct()
+    {
+        parent::__construct();
+        
+        if (!$this->is_valid_user()) {
+            die('foo');
             return;
         }
-        self::$hit_once = true;
+
+        $this->addStylesheet('disguise.less');
+        PageLayout::addScript($this->getPluginURL() . '/disguise.js');
 
         $template_factory = new Flexi_TemplateFactory(dirname(__FILE__));
 
         if ($this->is_disguised()) {
-            PageLayout::addStylesheet($this->getPluginURL() . '/disguised.css');
-
-            $html = $template_factory->render('disguised', array(
-                'random' => PluginEngine::getURL($this, array(
-                    'action'    => 'random',
-                    'return-to' => $_SERVER['REQUEST_URI'],
-                )),
-            ));
+            $html = $template_factory->render('disguised');
             PageLayout::addBodyElements($html);
 
-            $script = $template_factory->render('disguised-js', array(
-                'link'   => PluginEngine::getURL($this, array('logout' => 1)),
-            ));
-            $script = "//<![CDATA[\n" . rtrim($script) . "\n//]]>";
-            PageLayout::addHeadElement('script', array('type' => 'text/javascript'), $script);
-        } elseif (preg_match('~dispatch\.php/profile~', $_SERVER['REQUEST_URI']) && Request::get('username')) {
-            $script = $template_factory->render('disguise-js', array(
-                'link' => PluginEngine::getURL($this, array('disguise_as' => Request::get('username'))),
-            ));
-            $script = "//<![CDATA[\n" . rtrim($script) . "\n//]]>";
-            PageLayout::addHeadElement('script', array('type' => 'text/javascript'), $script);
-        } elseif (preg_match('~dispatch\.php/admin/user/~', $_SERVER['REQUEST_URI'])) {
-            $script = $template_factory->render('disguise-search-js', array(
-                'link' => PluginEngine::getURL($this, array('disguise_as' => 'REPLACE-WITH-USER')),
-            ));
-            $script = "//<![CDATA[\n" . rtrim($script) . "\n//]]>";
-            PageLayout::addHeadElement('script', array('type' => 'text/javascript'), $script);
+            $navigation = Navigation::getItem('/links/logout');
+            $navigation->setURL(PluginEngine::getLink($this, array(), 'logout'));
+            Navigation::addItem('/links/logout', $navigation);
         }
     }
+    
+    public function as_action()
+    {
+        $as = Request::get('username');
+        $user = User::findByUsername($as);
 
-    public function actionshow() {
-        if (Request::get('action') === 'random') {
-            $statement = DBManager::get()->prepare("SELECT user_id, perms, username FROM auth_user_md5 ORDER BY RAND() LIMIT 1");
-            $statement->execute(array($username));
-            $row = $statement->fetch(PDO::FETCH_ASSOC);
+        if ($user === null || $user->isNew()) {
+            throw new Exception('Cannot disguise as "' . $as . '" since the user is unknown.');
+        }
 
-            if (empty($row)) {
-                return;
-            }
-
-            $_SESSION['auth']->auth['uid']   = $row['user_id'];
-            $_SESSION['auth']->auth['perm']  = $row['perms'];
-            $_SESSION['auth']->auth['uname'] = $row['username'];
-
-            $this->relocate(Request::get('return-to'));
-        } elseif ($this->is_disguised() and Request::get('logout')) {
-            $uname = $_SESSION['auth']->auth['uname'];
-
-            foreach ($_SESSION['old_identity'] as $key => $value) {
-                $_SESSION['auth']->auth[$key] = $value;
-            }
-
-            $_SESSION['old_identity'] = null;
-            unset($_SESSION['old_identity']);
-
-            $this->relocate('dispatch.php/profile?username='.$uname);
-        } elseif (!$this->is_disguised() and $username = Request::get('disguise_as')) {
-            $statement = DBManager::get()->prepare("SELECT user_id, perms FROM auth_user_md5 WHERE username = ?");
-            $statement->execute(array($username));
-            $row = $statement->fetch(PDO::FETCH_ASSOC);
-
-            if (empty($row)) {
-                return;
-            }
-
+        if (!$this->is_disguised()) {
             $_SESSION['old_identity'] = array(
                 'uid'   => $_SESSION['auth']->auth['uid'],
                 'perm'  => $_SESSION['auth']->auth['perm'],
                 'uname' => $_SESSION['auth']->auth['uname'],
             );
-
-            $_SESSION['auth']->auth['uid']   = $row['user_id'];
-            $_SESSION['auth']->auth['perm']  = $row['perms'];
-            $_SESSION['auth']->auth['uname'] = $username;
-
-            $this->relocate('about.php');
         }
+
+        $_SESSION['auth']->auth['uid']   = $user->id;
+        $_SESSION['auth']->auth['perm']  = $user->perms;
+        $_SESSION['auth']->auth['uname'] = $user->username;
+
+        $this->relocate('dispatch.php/profile');
+    }
+    
+    public function logout_action()
+    {
+        if (!$this->is_disguised()) {
+            throw new Exception('Cannot log out of undisguised session');
+        }
+
+        $uname = $_SESSION['auth']->auth['uname'];
+
+        foreach ($_SESSION['old_identity'] as $key => $value) {
+            $_SESSION['auth']->auth[$key] = $value;
+        }
+
+        $_SESSION['old_identity'] = null;
+        unset($_SESSION['old_identity']);
+
+        $this->relocate('dispatch.php/profile?username=' . $uname);
     }
 
-    private function is_valid_user() {
+    private function is_valid_user()
+    {
         return $this->is_disguised()
-            or $this->getUser()->getPermission()->hasRootPermission();
+            || $GLOBALS['user']->perms === 'root';
     }
 
-    private function is_disguised() {
+    private function is_disguised()
+    {
         return !empty($_SESSION['old_identity']);
     }
 
-    private function relocate($url = '') {
+    private function relocate($url = '')
+    {
         page_close();
         header('Location: ' . URLHelper::getURL($url));
         die;
