@@ -11,13 +11,13 @@ jQuery(function ($) {
             .appendTo('#layout_content td:first');
     }
     
-    if (location.href.match(/\bdispatch\.php\/admin\/user\//)) {
+    if (location.href.match(/\bdispatch\.php\/admin\/user\//) && $('#layout_content form').length > 1) {
         $('#layout_content form:last tbody tr').each(function () {
             var username = $('td:eq(1)', this).text().trim(),
                 link     = $('<a class="disguise-me">');
             link.attr('href', getUserLink(username));
             link.attr('title', 'Als dieser Nutzer einloggen'.toLocaleString());
-            $('td:last', this).prepend(link);
+            $('td:last:not([colspan])', this).prepend(link);
         });
     }
     
