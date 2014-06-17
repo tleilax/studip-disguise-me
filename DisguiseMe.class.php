@@ -37,7 +37,6 @@ class DisguiseMe extends StudIPPlugin implements SystemPlugin
         parent::__construct();
         
         if (!$this->is_valid_user()) {
-            die('foo');
             return;
         }
 
