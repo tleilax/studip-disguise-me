@@ -1,5 +1,5 @@
 pluginclassname=DisguiseMe
 pluginname=Disguise Me
 origin=IBIT
-version=1.4.2
-studipMinVersion=2.5
+version=2.0
+studipMinVersion=3.1
