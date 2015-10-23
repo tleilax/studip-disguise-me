@@ -46,15 +46,17 @@ class DisguiseMe extends StudIPPlugin implements SystemPlugin
             PageLayout::addHeadElement('script', array(), $script);
         }
 
-        // Improvement by anoack: Hide activity when disguised so the user
-        // won't show as online
-        $stealth_mode = function () {
-            if (is_object($GLOBALS['sess'])) {
-                @session_write_close();
-            }
-            throw new NotificationVetoException();
-        };
-        NotificationCenter::addObserver($stealth_mode, '__invoke', 'PageCloseWillExecute');
+        if ($this->is_disguised()) {
+            // Improvement by anoack: Hide activity when disguised so the user
+            // won't show as online
+            $stealth_mode = function () {
+                if (is_object($GLOBALS['sess'])) {
+                    @session_write_close();
+                }
+                throw new NotificationVetoException();
+            };
+            NotificationCenter::addObserver($stealth_mode, '__invoke', 'PageCloseWillExecute');
+        }
     }
 
     public function perform($unconsumed_path)
