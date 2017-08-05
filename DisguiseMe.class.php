@@ -19,7 +19,7 @@ class DisguiseMe extends StudIPPlugin implements SystemPlugin
     public function __construct()
     {
         parent::__construct();
-        
+
         if (!$this->is_valid_user() or self::$hit_once) {
             return;
         }
@@ -31,15 +31,15 @@ class DisguiseMe extends StudIPPlugin implements SystemPlugin
             $this->addStylesheet('disguised.less');
             PageLayout::addScript($this->getPluginURL() . '/disguised.js');
 
-            $navigation = Navigation::getItem('/links/logout');
+            $navigation = Navigation::getItem('/avatar/logout');
             $navigation->setURL(PluginEngine::getURL($this, array(), 'logout'));
-            Navigation::addItem('/links/logout', $navigation);
-        } elseif (preg_match('~dispatch\.php/profile~', $_SERVER['REQUEST_URI']) && Request::get('username')) {
+            Navigation::addItem('/avatar/logout', $navigation);
+        } elseif (preg_match('~dispatch\.php/profile\b~', $_SERVER['REQUEST_URI']) && Request::get('username', $GLOBALS['user']->username) !== $GLOBALS['user']->username) {
             $script = $template_factory->render('disguise-js', array(
                 'link' => PluginEngine::getURL($this, array('username' => Request::get('username')), 'disguise'),
             ));
             PageLayout::addHeadElement('script', array(), $script);
-        } elseif (preg_match('~dispatch\.php/admin/user/~', $_SERVER['REQUEST_URI'])) {
+        } elseif (preg_match('~dispatch\.php/admin/user\b~', $_SERVER['REQUEST_URI'])) {
             $script = $template_factory->render('disguise-search-js', array(
                 'link' => PluginEngine::getURL($this, array('username' => 'REPLACE-WITH-USER'), 'disguise'),
             ));
